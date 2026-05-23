@@ -1,5 +1,9 @@
 # Knowledge RAG
 
+[![tests](https://github.com/CharlesXiangqianLIU/Agentic-RAG/actions/workflows/test.yml/badge.svg)](https://github.com/CharlesXiangqianLIU/Agentic-RAG/actions/workflows/test.yml)
+[![python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![license](https://img.shields.io/badge/license-MIT-green.svg)](#license)
+
 A fully private **Agentic RAG** system for querying a private document corpus.
 Works out of the box as a general-purpose knowledge base; can be specialised
 to any domain (chemistry, legal, HR, finance, …) by pointing at a single YAML
