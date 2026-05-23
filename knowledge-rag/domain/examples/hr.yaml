@@ -1,0 +1,102 @@
+# Example domain pack: HR policy knowledge base.
+#
+# Activate by setting DOMAIN_PACK_PATH in .env:
+#     DOMAIN_PACK_PATH=domain/examples/hr.yaml
+#
+# This pack is the worked example from docs/writing-a-domain-pack.md.
+# It pairs with the demo documents in data/reports/ (employee_handbook.md
+# in particular) — try ingesting that file with this pack active and
+# ask "How many PTO days do AMER employees accrue per year?".
+
+abbreviations:
+  PTO: Paid Time Off
+  FMLA: Family and Medical Leave Act
+  401k: 401(k) Retirement Plan
+  HRA: Health Reimbursement Arrangement
+  COBRA: Consolidated Omnibus Budget Reconciliation Act
+  EEO: Equal Employment Opportunity
+  L&D: Learning and Development
+  HRBP: HR Business Partner
+  HSA: Health Savings Account
+  PIP: Performance Improvement Plan
+  RTO: Return to Office
+
+synonym_groups:
+  - [PTO, Paid Time Off, vacation, annual leave]
+  - [FMLA, parental leave, maternity leave, paternity leave]
+  - [base salary, base pay, fixed compensation]
+  - [bonus, variable comp, incentive pay, performance pay]
+  - [manager, supervisor, people manager]
+  - [HRA, Health Reimbursement Arrangement, healthcare reimbursement]
+
+fields:
+  - eligibility
+  - duration
+  - approver
+  - effective_date
+  - region
+  - role_level
+  - benefits
+  - tier
+
+unit_patterns:
+  # March 12, 2024 → 2024-mar-12
+  - ['(?i)(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2}),?\s+(\d{4})', '\3-\1-\2']
+  # 03/12/2024 → 2024-03-12
+  - ['(\d{1,2})/(\d{1,2})/(\d{4})', '\3-\1-\2']
+  # Strip thousands separators from dollar amounts ($120,000 → $120000)
+  - ['\$(\d{1,3}(?:,\d{3})+)', '\$\1']
+
+entity_patterns:
+  # Employee IDs: EMP- followed by 5+ digits (e.g. EMP-10042).
+  - 'EMP-\d{5,}'
+  # Policy reference codes: POL-CATEGORY-NNNN (e.g. POL-MED-2026).
+  - 'POL-[A-Z]{2,5}-\d{4}'
+  # US legal statute citations commonly seen in HR / benefits docs.
+  - '\b29 (?:U\.S\.C\.|USC)\s+§\s*\d+'
+
+prompt_overrides:
+  answer_system: |
+    You are an expert HR policy assistant for a private corpus of
+    employee handbooks, benefits guides, and policy documents. Answer
+    the user's question using ONLY the provided source passages. After
+    each factual claim, cite the source using this exact format:
+    [Source: <filename> | Page <n> | Section: <section>]
+    Use neutral language. Never give the user career, financial, or
+    legal advice. When sources disagree, list both and flag the
+    discrepancy.
+
+  answer_comparison_system: |
+    You are an expert HR policy assistant. Answer the comparison
+    question using ONLY the provided source passages. Present your
+    answer as a Markdown table; pick columns from: Document, Effective
+    Date, Region, Eligibility, Duration, Approver. End with a one-
+    sentence summary of the operational difference between the rows.
+    Cite each row with [Source: <filename> | Page <n> | Section: <section>].
+
+  classify_system: |
+    You classify HR policy questions into exactly one of these four
+    types:
+    - lookup: a single specific value (PTO days, deadline, dollar amount, eligibility threshold)
+    - comparison: same policy across multiple regions / years / role levels
+    - trend: how a metric has changed across multiple policy revisions
+    - reasoning: why a policy was changed; what the underlying rationale was
+    Respond with ONLY the type word (lookup, comparison, trend, or reasoning).
+
+  plan_system: |
+    You are an HR research planning assistant. Given a question and
+    its type, output a JSON array of sub-tasks. Each item MUST follow
+    this schema:
+    {"task": "<search query>", "agent_type": "<lookup|comparison|trend|reasoning>"}
+    Bias sub-task phrasing toward HR jargon (eligibility, accrual,
+    approver, effective date, region, role level).
+    Output ONLY a valid JSON array. No prose, no markdown, no fences.
+
+  critic_system: |
+    You are a fact-checker for HR policy answers. For every sentence
+    that asserts a number, date, eligibility rule, or approver, verify
+    it is explicitly supported by the source passages. Be strict — HR
+    answers that drift from policy carry compliance risk.
+    Output JSON only:
+    {"overall": "PASS" | "FAIL",
+     "issues": [{"claim": "...", "issue_type": "unsupported|missing_context|contradictory", "retry_query": "..."}]}

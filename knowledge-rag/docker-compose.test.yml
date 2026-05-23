@@ -1,0 +1,12 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6334:6333"        # dev compose uses 6333; we expose on 6334 so the two can coexist
+    volumes:
+      - ./data/qdrant_e2e_storage:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/readyz"]
+      interval: 3s
+      retries: 10
+      start_period: 5s

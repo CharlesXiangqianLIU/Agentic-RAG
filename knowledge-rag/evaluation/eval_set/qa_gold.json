@@ -1,0 +1,20 @@
+[
+  {
+    "id": "QA-001",
+    "type": "parameter_lookup",
+    "question": "<TODO: replace with a domain-specific lookup question (single specific value / attribute).>",
+    "expected_answer": "",
+    "source_file": "",
+    "source_page": null,
+    "source_section": ""
+  },
+  {
+    "id": "QA-002",
+    "type": "cross_report_comparison",
+    "question": "<TODO: replace with a domain-specific comparison question across multiple documents.>",
+    "expected_answer": "",
+    "source_file": "multiple",
+    "source_page": null,
+    "source_section": ""
+  }
+]

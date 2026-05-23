@@ -1,0 +1,31 @@
+# Runtime artifacts
+**/.ingestion_state.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environments
+.env
+.venv/
+venv/
+.streamlit/secrets.toml
+
+# Test/coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Data
+# Don't blanket-ignore data/reports/ — the repo ships demo documents
+# there. Add your own user-corpus gitignore rules locally if you place
+# private files alongside them.
+data/qdrant_storage/
+data/qdrant_e2e_storage/
+
+# macOS
+.DS_Store

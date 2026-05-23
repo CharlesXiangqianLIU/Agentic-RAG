@@ -1,0 +1,150 @@
+# Example domain pack: synthetic chemistry R&D reports.
+#
+# Activate by setting DOMAIN_PACK_PATH in .env:
+#     DOMAIN_PACK_PATH=domain/examples/chemistry.yaml
+#
+# This pack reproduces the original chemistry-specialized behavior:
+# common solvent / catalyst / reagent abbreviations, synonym groups for
+# query expansion, comparison/trend table fields, Celsius/Fahrenheit
+# normalization, and a chemistry-flavored answer system prompt.
+
+abbreviations:
+  DCM: Dichloromethane
+  MeOH: Methanol
+  EtOH: Ethanol
+  EtOAc: Ethyl acetate
+  THF: Tetrahydrofuran
+  DMF: N,N-Dimethylformamide
+  DMSO: Dimethyl sulfoxide
+  MeCN: Acetonitrile
+  Et2O: Diethyl ether
+  iPrOH: Isopropanol
+  TFA: Trifluoroacetic acid
+  TEA: Triethylamine
+  DIPEA: N,N-Diisopropylethylamine
+  Pd(OAc)2: Palladium(II) acetate
+  Pd(PPh3)4: Tetrakis(triphenylphosphine)palladium(0)
+  Pd: Palladium
+  Pt: Platinum
+  Ni: Nickel
+  Cu: Copper
+  Fe: Iron
+  Rh: Rhodium
+  Ir: Iridium
+  Ru: Ruthenium
+  NaOH: Sodium hydroxide
+  K2CO3: Potassium carbonate
+  NaHCO3: Sodium bicarbonate
+  rt: room temperature
+  r.t.: room temperature
+
+synonym_groups:
+  - [DCM, Dichloromethane, methylene chloride, CH2Cl2]
+  - [THF, Tetrahydrofuran]
+  - [MeOH, Methanol, methyl alcohol]
+  - [EtOAc, Ethyl acetate, EA]
+  - [DMF, N,N-Dimethylformamide, dimethylformamide]
+  - [DMSO, Dimethyl sulfoxide, dimethylsulphoxide]
+  - [MeCN, Acetonitrile, CH3CN]
+
+fields:
+  - yield
+  - temperature
+  - catalyst
+  - solvent
+  - time
+  - loading
+  - selectivity
+  - conversion
+
+unit_patterns:
+  - ['(\d+)\s*deg\s*[Cc]', '\1 °C']
+  - ['(\d+)\s*°\s*[Cc]', '\1 °C']
+  - ['(\d+)\s*°\s*[Ff]', '\1 °F']
+
+# Entity patterns: anything in the chunk text matching these regexes
+# becomes a candidate for second-hop search queries in multi_hop_search.
+# The temperature pattern below is the chemistry-specific addition; the
+# always-on uppercase-code pattern (PRJ-031 style) runs separately.
+entity_patterns:
+  - '\d+\s*°C'
+
+prompt_overrides:
+  answer_system: |
+    You are an expert synthetic chemistry assistant. Answer the question using
+    ONLY the provided source passages. After each factual claim, cite the
+    source using this exact format:
+    [Source: <filename> | Page <n> | Section: <section>]
+    Never invent chemical procedures, yields, or conditions not present in the
+    sources.
+
+  answer_comparison_system: |
+    You are an expert synthetic chemistry assistant. Answer the comparison
+    question using ONLY the provided source passages. Present your answer as a
+    Markdown table with clearly labelled columns (e.g. Report, Catalyst,
+    Temperature, Yield). After the table, add a brief 1-2 sentence summary of
+    the key difference. Cite each row with the source:
+    [Source: <filename> | Page <n> | Section: <section>]
+    Never invent data not present in the sources.
+
+  answer_trend_system: |
+    You are an expert synthetic chemistry assistant. Answer the trend question
+    using ONLY the provided source passages. Present your answer as:
+    1. A numbered list of data points (e.g. "1. At 6h: yield = 65% [Source: ...]")
+    2. A concluding sentence describing the overall trend direction
+       (increasing / decreasing / stable).
+    Never invent data not present in the sources.
+
+  classify_system: |
+    You classify chemistry research questions into exactly one of these four
+    types:
+    - lookup: asking for a single specific value (yield, temperature,
+      reagent, CAS number, time)
+    - comparison: asking to compare data across multiple reports or entries
+    - trend: asking about patterns or trends across many data points over
+      time or conditions
+    - reasoning: asking why something happened, causal analysis, mechanistic
+      questions
+
+    Respond with ONLY the type word (lookup, comparison, trend, or reasoning).
+    Nothing else.
+
+  plan_system: |
+    You are a chemistry research assistant. Given a question and its type,
+    output a JSON array of sub-tasks.
+
+    Each item MUST follow this exact schema:
+    {"task": "<specific search query string>", "agent_type": "<lookup|comparison|trend|reasoning>"}
+
+    Rules:
+    - lookup: exactly 1 task with agent_type="lookup"
+    - comparison: 2-4 tasks, each with agent_type="comparison"
+    - trend: 2-3 tasks, each with agent_type="trend"
+    - reasoning: 2-4 tasks, mix of agent_type="lookup" and agent_type="reasoning"
+
+    Examples:
+
+    Question: What was the yield when using Pd(OAc)2 at 80 degrees C?
+    Type: lookup
+    Output: [{"task": "Pd(OAc)2 catalyst yield 80 degrees", "agent_type": "lookup"}]
+
+    Question: Compare the optimal temperatures for coupling reactions in PRJ-2024-031 vs PRJ-2024-032.
+    Type: comparison
+    Output: [{"task": "optimal temperature coupling reaction PRJ-2024-031", "agent_type": "comparison"}, {"task": "optimal temperature coupling reaction PRJ-2024-032", "agent_type": "comparison"}, {"task": "temperature yield comparison coupling reaction", "agent_type": "comparison"}]
+
+    Output ONLY a valid JSON array. No explanation, no markdown, no code fences.
+
+  critic_system: |
+    You are a critical fact-checker for chemistry research answers. For every
+    sentence in the answer that contains a specific number, compound name, or
+    factual claim, check if it is directly supported by the provided source
+    passages.
+    Output JSON only:
+    {
+      "overall": "PASS" or "FAIL",
+      "issues": [
+        {"claim": "<the problematic sentence>", "issue_type": "unsupported|missing_context|contradictory", "retry_query": "<suggested search to find supporting evidence>"}
+      ]
+    }
+    If all claims are supported, set overall to PASS and issues to [].
+    Do NOT output anything outside the JSON object.

@@ -1,0 +1,56 @@
+RELEASE NOTES — KNOWLEDGE-RAG v2.4
+
+Released: 2026-04-15
+
+NEW FEATURES
+
+- Multi-format ingestion: the parser now accepts .docx, .md, .txt,
+  .pdf, and .html alongside the original .docx-only path. Drop any
+  mix into data/reports/ and ingest in one pass.
+- Domain packs: a single YAML file (domain pack) configures domain
+  vocabulary, units, and prompts without touching code. See
+  docs/writing-a-domain-pack.md.
+- Streaming UI: answers render token by token in the Streamlit chat
+  while node status indicators update behind the scenes.
+
+PERFORMANCE
+
+- PDF prose extraction now crops out detected table regions so
+  tabular content no longer enters the index twice.
+- The MAX_CONTEXT_TOKENS budget scales with the active LLM's window;
+  claude-sonnet-4-6 now defaults to 80 000 tokens of evidence instead
+  of the legacy 8 000.
+- Semantic deduplication in synthesis (opt-in via SEMANTIC_DEDUP=1)
+  merges paraphrased duplicates before they hit the answer prompt.
+
+OPERATIONS
+
+- Audit log table records every Q&A turn with its evidence chunks.
+- DATABASE_URL=postgresql://... switches persistence from SQLite to
+  Postgres for multi-replica deployments.
+- New GPU autodetect for the embedder; fp16 enables automatically on
+  CUDA / MPS devices.
+- Docker compose test stack (docker-compose.test.yml) plus a
+  skip-when-unavailable e2e suite (make e2e).
+
+BUG FIXES
+
+- frontend/export.py: Excel layout now reads from chunk["payload"]
+  with attribution fallback, matching the chunk shape the indexer
+  actually produces.
+- worker.py: timed-out worker calls reuse a bounded ThreadPoolExecutor
+  instead of leaking daemon threads on each timeout.
+- searcher.get_client(): double-checked-lock construction prevents
+  concurrent first-call races from creating two QdrantClient
+  instances.
+
+UPGRADE NOTES
+
+- If you previously set EMBEDDING_MODEL to anything other than
+  BAAI/bge-m3, the indexer now refuses to write to a collection with
+  a mismatched dense-vector dimension. Delete and recreate the
+  collection, or pin the dim with QDRANT_COLLECTION=<a-new-name>.
+- The chemistry domain pack moved from being a default behavior to
+  an opt-in example at domain/examples/chemistry.yaml. Set
+  DOMAIN_PACK_PATH=domain/examples/chemistry.yaml to restore the
+  original chemistry-specialised behaviour.
